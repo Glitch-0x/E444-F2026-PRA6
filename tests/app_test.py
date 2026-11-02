@@ -17,6 +17,9 @@ def client():
     with app.app_context():
         db.create_all()  # setup
         yield app.test_client()  # tests run here
+
+        db.session.remove()
+
         db.drop_all()  # teardown
 
 
@@ -85,3 +88,23 @@ def test_delete_message(client):
     rv = client.get("/delete/1")
     data = json.loads(rv.data)
     assert data["status"] == 1
+
+
+def test_unauthenticated_add(client):
+    """Ensure unauthenticated users cannot add a post."""
+    response = client.post(
+        "/add",
+        data=dict(title="Unauthorized Title", text="This post should fail."),
+    )
+    assert response.status_code == 401
+
+
+def test_search_route(client):
+    """Ensure the search page loads correctly with and without a query."""
+    # Test ohne Suchbegriff
+    response_no_query = client.get("/search/")
+    assert response_no_query.status_code == 200
+
+    # Test mit einem Suchbegriff als URL-Parameter
+    response_with_query = client.get("/search/?query=Test")
+    assert response_with_query.status_code == 200
